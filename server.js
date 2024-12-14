@@ -1,9 +1,8 @@
-// server.js
 const express = require('express');
 const bodyParser = require('body-parser');
-const fetch = require('node-fetch');
 const cors = require('cors');
-const { ethers } = require('ethers');
+// node-fetch を動的インポート
+const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
 const app = express();
 app.use(bodyParser.json());
@@ -32,7 +31,6 @@ app.post('/api/login', (req, res) => {
     try {
         const recoveredAddress = ethers.utils.verifyMessage(message, signature);
         if (recoveredAddress.toLowerCase() === address.toLowerCase()) {
-            // JWTなどのトークンを発行する場合はここで生成
             res.json({ success: true });
         } else {
             res.json({ success: false, message: 'Signature verification failed' });
@@ -49,18 +47,15 @@ app.post('/api/getAxies', async (req, res) => {
 
     const query = `
         query GetAxieBriefList($owner: String!) {
-    axies(owner: $owner, from: 0, size: 10) {
-        total
-        results {
-            id
-            name
-            image
-            class
-            breedCount
-            stage
+            axies(owner: $owner, from: 0, size: 10) {
+                total
+                results {
+                    id
+                    name
+                    image
+                }
+            }
         }
-    }
-}
     `;
 
     try {
