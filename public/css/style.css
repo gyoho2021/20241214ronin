@@ -1,0 +1,129 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Poppins', sans-serif;
+  background: linear-gradient(135deg, #343e59, #3c486b);
+  color: #fff;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 全体を中央揃え */
+body {
+  justify-content: center;
+  align-items: center;
+}
+
+/* ヘッダー */
+header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+header h1 {
+  font-size: 2rem;
+  font-weight: 600;
+  margin: 0;
+  padding: 20px 0;
+}
+
+/* メインコンテナ */
+main {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  flex: 1;
+}
+
+/* カードコンテナ */
+.card {
+  background: #1f1f2f;
+  border-radius: 10px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+  padding: 30px;
+  width: 300px;
+  text-align: center;
+}
+
+#status {
+  display: inline-block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+
+/* ボタン共通スタイル */
+button {
+  width: 100%;
+  padding: 12px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  outline: none;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  margin-bottom: 10px;
+}
+
+/* Connectボタン */
+#connectButton {
+  background: #5468ff;
+  color: #fff;
+}
+
+#connectButton:hover:not(:disabled) {
+  background: #4055e8;
+  transform: translateY(-2px);
+}
+
+/* Loginボタン */
+#loginButton {
+  background: #38b48b;
+  color: #fff;
+}
+
+#loginButton:hover:not(:disabled) {
+  background: #2f9a76;
+  transform: translateY(-2px);
+}
+
+#loginButton:disabled,
+#connectButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* フッター */
+footer {
+  text-align: center;
+  font-size: 0.8rem;
+  color: #ccc;
+  padding: 10px 0;
+  margin-top: 20px;
+  opacity: 0.7;
+}
+
+.axie-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: center;
+  margin-top: 40px;
+}
+
+.axie-card {
+  background: #1f1f2f;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+  width: 140px;
+  font-size: 0.9rem;
+  color: #fff;
+}

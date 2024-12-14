@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Ronin Wallet Axie Display</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <!-- 外部CSSの読み込み -->
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Ethers UMD -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Ronin Wallet Axie Display</h1>
+    </header>
+    <main>
+        <div class="card">
+            <p id="status"></p>
+            <button id="connectButton">Connect Ronin Wallet</button>
+            <button id="loginButton" disabled>Login with Signature</button>
+        </div>
+        <div id="axieContainer" class="axie-grid"></div>
+    </main>
+    <footer>
+        © 2024 MyDapp
+    </footer>
+
+    <script>
+        let provider;
+        let signer;
+        let userAddress;
+
+        function initProvider() {
+            if (typeof window.ethereum !== 'undefined' && window.ethereum.isRonin) {
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+            } else if (typeof window.ronin !== 'undefined' && window.ronin.provider) {
+                provider = new ethers.providers.Web3Provider(window.ronin.provider);
+            } else {
+                document.getElementById('status').innerText = 'Ronin Walletが検出されません。';
+                return;
+            }
+        }
+
+        initProvider();
+
+        const connectButton = document.getElementById('connectButton');
+        const loginButton = document.getElementById('loginButton');
+        const status = document.getElementById('status');
+
+        connectButton.addEventListener('click', async () => {
+            if (!provider) {
+                status.innerText = 'プロバイダが初期化されていません';
+                return;
+            }
+            try {
+                await provider.send("eth_requestAccounts", []);
+                signer = provider.getSigner();
+                userAddress = await signer.getAddress();
+                status.innerText = `Connected: ${userAddress}`;
+                loginButton.disabled = false;
+            } catch (error) {
+                console.error(error);
+                status.innerText = '接続に失敗しました。';
+            }
+        });
+
+        loginButton.addEventListener('click', async () => {
+            if (!signer || !userAddress) {
+                status.innerText = 'ウォレットが接続されていません。';
+                return;
+            }
+
+            const nonceResponse = await fetch('/api/getNonce', { method: 'GET' });
+            const { nonce } = await nonceResponse.json();
+
+            const signature = await signer.signMessage(`Login request nonce: ${nonce}`);
+
+            const loginResponse = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    address: userAddress,
+                    signature: signature,
+                    nonce: nonce
+                })
+            });
+
+            const loginResult = await loginResponse.json();
+            if (loginResult.success) {
+                status.innerText = 'ログイン成功！ Axie情報を取得します...';
+                // ログイン成功後にAxie一覧をロード
+                loadAxies(userAddress);
+            } else {
+                status.innerText = 'ログイン失敗';
+            }
+        });
+
+        async function loadAxies(roninAddress) {
+            // roninアドレスを0xアドレスに変換
+            const ethAddress = roninAddress.replace('ronin:', '0x').toLowerCase();
+
+            const query = `
+                query GetAxieBriefList($owner: String!) {
+                    axies(owner: $owner, from: 0, size: 10) {
+                        total
+                        results {
+                            id
+                            name
+                            image
+                        }
+                    }
+                }
+            `;
+
+            try {
+                // Axie Infinity公式のGraphQLエンドポイントに直接問い合わせ
+                const response = await fetch('https://graphql-gateway.axieinfinity.com/graphql', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query,
+                        variables: { owner: ethAddress }
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Network response was not ok: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log(data); // レスポンス内容を確認
+
+                const axieContainer = document.getElementById('axieContainer');
+                axieContainer.innerHTML = ''; // 初期化
+
+                if (data.errors) {
+                    axieContainer.innerText = `Error: ${data.errors[0].message}`;
+                    return;
+                }
+
+                if (!data.data || !data.data.axies || !data.data.axies.results) {
+                    axieContainer.innerText = 'Axie情報を取得できませんでした。';
+                    return;
+                }
+
+                const axies = data.data.axies.results;
+
+                if (axies.length === 0) {
+                    axieContainer.innerText = 'このウォレットにはAxiesがありません。';
+                    return;
+                }
+
+                axies.forEach(axie => {
+                    const axieDiv = document.createElement('div');
+                    axieDiv.classList.add('axie-card');
+
+                    const img = document.createElement('img');
+                    img.src = axie.image;
+                    img.alt = axie.name;
+
+                    const name = document.createElement('p');
+                    name.innerText = axie.name ? axie.name : `Axie #${axie.id}`;
+
+                    axieDiv.appendChild(img);
+                    axieDiv.appendChild(name);
+                    axieContainer.appendChild(axieDiv);
+                });
+            } catch (error) {
+                console.error('Error fetching Axies:', error);
+                const axieContainer = document.getElementById('axieContainer');
+                axieContainer.innerText = `Axie情報の取得中にエラーが発生しました: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
