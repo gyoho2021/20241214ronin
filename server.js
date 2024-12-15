@@ -1,79 +1,38 @@
 const express = require('express');
-const bodyParser = require('body-parser');
 const cors = require('cors');
-// node-fetch を動的インポート
+const bodyParser = require('body-parser');
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
+const path = require('path');
 
 const app = express();
-app.use(bodyParser.json());
+const PORT = 3000;
+
+// CORS対応
 app.use(cors());
-app.use(express.static('public'));
+app.use(bodyParser.json());
 
-// ノンス管理用（簡易）
-const nonces = {};
+// 静的ファイルを提供
+app.use(express.static(path.join(__dirname, 'public')));
 
-// ノンス取得エンドポイント
-app.get('/api/getNonce', (req, res) => {
-    const nonce = Math.floor(Math.random() * 1000000).toString();
-    nonces[nonce] = true;
-    res.json({ nonce });
-});
 
-// ログインエンドポイント
-app.post('/api/login', (req, res) => {
-    const { address, signature, nonce } = req.body;
-    if (!nonces[nonce]) {
-        return res.json({ success: false, message: 'Invalid nonce' });
-    }
-    delete nonces[nonce];
-
-    const message = `Login request nonce: ${nonce}`;
-    try {
-        const recoveredAddress = ethers.utils.verifyMessage(message, signature);
-        if (recoveredAddress.toLowerCase() === address.toLowerCase()) {
-            res.json({ success: true });
-        } else {
-            res.json({ success: false, message: 'Signature verification failed' });
-        }
-    } catch (error) {
-        console.error(error);
-        res.json({ success: false, message: 'Signature verification error' });
-    }
-});
-
-// Axie取得エンドポイント
-app.post('/api/getAxies', async (req, res) => {
-    const { owner } = req.body;
-
-    const query = `
-        query GetAxieBriefList($owner: String!) {
-            axies(owner: $owner, from: 0, size: 10) {
-                total
-                results {
-                    id
-                    name
-                    image
-                }
-            }
-        }
-    `;
-
+// APIプロキシエンドポイント
+app.post('/api/proxy', async (req, res) => {
+    console.log('Received request:', req.body); // リクエスト内容をログに出力
     try {
         const response = await fetch('https://graphql-gateway.axieinfinity.com/graphql', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query, variables: { owner } })
+            body: JSON.stringify(req.body)
         });
-
         const data = await response.json();
         res.json(data);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ errors: [{ message: 'Internal Server Error' }] });
+        console.error('Error fetching Axie data:', error);
+        res.status(500).json({ error: 'Failed to fetch Axie data' });
     }
 });
 
-const PORT = process.env.PORT || 3000;
+// サーバー起動
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`Server is running on http://localhost:${PORT}`);
 });
